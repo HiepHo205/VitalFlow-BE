@@ -28,8 +28,11 @@ class RoutineItem extends Model
         return $this->belongsTo(Routine::class);
     }
 
-    public function completions(): HasMany
+    public function completions()
     {
-        return $this->hasMany(RoutineCompletion::class);
+        return $this->hasMany(
+            RoutineCompletion::class,
+            'routine_item_id'
+        );
     }
 }

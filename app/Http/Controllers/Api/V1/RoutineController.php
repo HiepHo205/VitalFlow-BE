@@ -21,9 +21,18 @@ class RoutineController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $routines = $request->user()->routines()->with('items')->latest()->paginate(15);
+        $routines = $request
+            ->user()
+            ->routines()
+            ->with([
+                'items.completions'
+            ])
+            ->latest()
+            ->paginate(15);
 
-        return RoutineResource::collection($routines);
+        return RoutineResource::collection(
+            $routines
+        );
     }
 
     public function store(StoreRoutineRequest $request): RoutineResource
@@ -45,22 +54,93 @@ class RoutineController extends Controller
         return new RoutineResource($routine);
     }
 
-    public function show(Request $request, Routine $routine): RoutineResource
-    {
-        $this->authorize('view', $routine);
+    public function show(
+        Request $request,
+        Routine $routine
+    ): RoutineResource {
+        $this->authorize(
+            'view',
+            $routine
+        );
 
-        $routine->load('items');
+        $routine->load([
+            'items.completions'
+        ]);
 
-        return new RoutineResource($routine);
+        return new RoutineResource(
+            $routine
+        );
     }
 
-    public function update(UpdateRoutineRequest $request, Routine $routine): RoutineResource
-    {
+    public function update(
+        UpdateRoutineRequest $request,
+        Routine $routine
+    ): RoutineResource {
         $this->authorize('update', $routine);
 
-        $routine->update($request->validated());
+        DB::transaction(function () use (
+            $request,
+            $routine
+        ) {
 
-        return new RoutineResource($routine->fresh()->load('items'));
+            $routine->update([
+                'name' => $request->name,
+                'description' => $request->description,
+                'is_ai_generated' => $request->is_ai_generated ?? false,
+            ]);
+
+            $incomingItems = collect(
+                $request->items ?? []
+            );
+
+            $incomingIds = $incomingItems
+                ->pluck('id')
+                ->filter();
+
+            $routine->items()
+                ->whereNotIn('id', $incomingIds)
+                ->delete();
+
+            foreach ($incomingItems as $itemData) {
+
+                if (!empty($itemData['id'])) {
+
+                    $item = $routine->items()
+                        ->where('id', $itemData['id'])
+                        ->first();
+
+                    if ($item) {
+                        $item->update([
+                            'title' => $itemData['title'],
+                            'description' => $itemData['description'],
+                            'category' => $itemData['category'],
+                            'start_time' => $itemData['start_time'],
+                            'end_time' => $itemData['end_time'],
+                            'duration_minutes' => $itemData['duration_minutes'],
+                            'priority' => $itemData['priority'],
+                            'recurrence_type' => $itemData['recurrence_type'],
+                        ]);
+                    }
+
+                } else {
+
+                    $routine->items()->create([
+                        'title' => $itemData['title'],
+                        'description' => $itemData['description'],
+                        'category' => $itemData['category'],
+                        'start_time' => $itemData['start_time'],
+                        'end_time' => $itemData['end_time'],
+                        'duration_minutes' => $itemData['duration_minutes'],
+                        'priority' => $itemData['priority'],
+                        'recurrence_type' => $itemData['recurrence_type'],
+                    ]);
+                }
+            }
+        });
+
+        $routine->load('items.completions');
+
+        return new RoutineResource($routine);
     }
 
     public function destroy(Request $request, Routine $routine): Response

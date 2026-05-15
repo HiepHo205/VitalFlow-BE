@@ -20,16 +20,39 @@ class RoutineCompletionController extends Controller
         return RoutineCompletionResource::collection($rows);
     }
 
-    public function store(StoreRoutineCompletionRequest $request): RoutineCompletionResource
-    {
-        $validated = $request->validated();
+    public function store(
+        StoreRoutineCompletionRequest $request
+    ) {
+        $data = $request->validated();
 
-        $item = RoutineItem::query()->findOrFail($validated['routine_item_id']);
-        $this->authorize('view', $item->routine);
+        $completion =
+            RoutineCompletion::firstOrCreate(
+                [
+                    'user_id' => auth()->id(),
 
-        $completion = $request->user()->routineCompletions()->create($validated);
+                    'routine_item_id' =>
+                        $data['routine_item_id'],
 
-        return new RoutineCompletionResource($completion->load('routineItem'));
+                    'completed_date' =>
+                        $data['completed_date'],
+                ],
+
+                [
+                    'status' =>
+                        $data['status'],
+
+                    'note' =>
+                        $data['note'] ?? null,
+
+                    'completed_at' =>
+                        $data['completed_at']
+                        ?? now(),
+                ]
+            );
+
+        return response()->json([
+            'data' => $completion,
+        ]);
     }
 
     public function show(Request $request, RoutineCompletion $routineCompletion): RoutineCompletionResource
