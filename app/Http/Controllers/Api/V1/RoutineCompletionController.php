@@ -29,6 +29,12 @@ class RoutineCompletionController extends Controller
 
         $completion = $request->user()->routineCompletions()->create($validated);
 
+        $completion->load('routineItem.routine.goal');
+
+        if ($completion->routineItem && $completion->routineItem->routine && $completion->routineItem->routine->goal) {
+            $completion->routineItem->routine->goal->recordProgress();
+        }
+
         return new RoutineCompletionResource($completion->load('routineItem'));
     }
 

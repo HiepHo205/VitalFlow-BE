@@ -19,7 +19,9 @@ class HeuristicAiAnalysisService implements AiAnalysisContract
     {
         $profile = $user->healthProfile;
         $workHours = $preferences['typical_work_hours'] ?? '9–18';
-        $focus = $preferences['focus'] ?? 'Giảm mệt mỏi, duy trì vận động';
+        $goal = isset($preferences['goal']) && is_array($preferences['goal']) ? $preferences['goal'] : null;
+        $focus = $preferences['focus'] ?? $this->goalFocus($goal);
+        $goalTime = $this->goalTimeSummary($goal);
 
         $items = [
             [
@@ -68,7 +70,7 @@ class HeuristicAiAnalysisService implements AiAnalysisContract
 
         return [
             'name' => 'Routine gợi ý — '.$focus,
-            'description' => trim("Gợi ý dựa trên hồ sơ và mục tiêu: {$focus}. {$ageNote} Điều chỉnh giờ cho khớp lịch thực tế."),
+            'description' => trim("Gợi ý dựa trên hồ sơ, mục tiêu: {$focus}. {$goalTime} {$ageNote} Điều chỉnh giờ cho khớp lịch thực tế."),
             'is_ai_generated' => true,
             'items' => $items,
         ];
@@ -151,6 +153,41 @@ class HeuristicAiAnalysisService implements AiAnalysisContract
         return (string) $bmi;
     }
 
+    private function goalFocus(?array $goal): string
+    {
+        if ($goal === null || empty($goal['goal_type'])) {
+            return 'Giảm mệt mỏi, duy trì vận động';
+        }
+
+        $parts = ['Hoàn thành goal '.$goal['goal_type']];
+
+        if (array_key_exists('target_value', $goal) && $goal['target_value'] !== null) {
+            $parts[] = 'target '.$goal['target_value'];
+        }
+
+        if (array_key_exists('current_value', $goal) && $goal['current_value'] !== null) {
+            $parts[] = 'hiện tại '.$goal['current_value'];
+        }
+
+        return implode(', ', $parts);
+    }
+
+    private function goalTimeSummary(?array $goal): string
+    {
+        if ($goal === null) {
+            return '';
+        }
+
+        $startDate = $goal['start_date'] ?? null;
+        $endDate = $goal['end_date'] ?? null;
+
+        if (! $startDate && ! $endDate) {
+            return '';
+        }
+
+        return 'Thời gian goal: '.($startDate ?: 'không rõ ngày bắt đầu').' đến '.($endDate ?: 'không rõ ngày kết thúc').'.';
+    }
+
     private function dailyRecommendationHeuristic(DailyLog $log): string
     {
         if ($log->sleep_hours !== null && $log->sleep_hours < 6) {
@@ -169,5 +206,57 @@ class HeuristicAiAnalysisService implements AiAnalysisContract
         }
 
         return 'Tín hiệu ổn định — duy trì routine hiện tại, tiếp tục ghi log để phát hiện xu hướng tuần.';
+    }
+
+    public function analyzeDailyLogs(User $user, array $dailyLogs): ?array
+    {
+        $count = count($dailyLogs);
+
+        if ($count === 0) {
+            return [
+                'summary' => 'Không có dữ liệu nhật ký để phân tích.',
+                'recommendation' => 'Hãy bắt đầu ghi nhật ký hàng ngày.',
+            ];
+        }
+
+        $totalMood = 0;
+        $totalEnergy = 0;
+        $totalStress = 0;
+        $totalSleep = 0;
+
+        foreach ($dailyLogs as $log) {
+            $totalMood += $log['mood_score'] ?? 0;
+            $totalEnergy += $log['energy_level'] ?? 0;
+            $totalStress += $log['stress_level'] ?? 0;
+            $totalSleep += $log['sleep_hours'] ?? 0;
+        }
+
+        $avgMood = round($totalMood / $count, 1);
+        $avgEnergy = round($totalEnergy / $count, 1);
+        $avgStress = round($totalStress / $count, 1);
+        $avgSleep = round($totalSleep / $count, 1);
+
+        $summary =
+            "Mood trung bình: {$avgMood}/10, "
+            ."Energy: {$avgEnergy}/10, "
+            ."Stress: {$avgStress}/10, "
+            ."Sleep: {$avgSleep} giờ.";
+
+        $recommendation = "Duy trì thói quen ổn định, ngủ đủ giấc và giảm stress.";
+
+        AiFeedback::query()->create([
+            'user_id' => $user->id,
+            'related_log_id' => null,
+            'related_routine_id' => null,
+            'feedback_type' => 'daily_logs_summary',
+            'summary' => $summary,
+            'recommendation' => $recommendation,
+            'generated_at' => now(),
+        ]);
+
+        return [
+            'summary' => $summary,
+            'recommendation' => $recommendation,
+        ];
     }
 }
