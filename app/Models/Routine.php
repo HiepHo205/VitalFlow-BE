@@ -13,6 +13,7 @@ class Routine extends Model
 
     protected $fillable = [
         'user_id',
+        'goal_id',
         'name',
         'description',
         'is_ai_generated',
@@ -31,6 +32,11 @@ class Routine extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function goal(): BelongsTo
+    {
+        return $this->belongsTo(Goal::class);
     }
 
     public function items(): HasMany

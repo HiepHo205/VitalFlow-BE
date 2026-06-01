@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\UserSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
@@ -91,12 +92,22 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out.']);
     }
 
-    public function refresh(): AuthTokenResource
+    public function refresh(): JsonResponse|AuthTokenResource
     {
-        $token = auth('api')->refresh();
+        $guard = auth('api');
+
+        try {
+            $token = $guard->refresh();
+        } catch (JWTException) {
+            return response()->json(['message' => 'Token cannot be refreshed.'], 401);
+        }
 
         /** @var User $user */
-        $user = auth('api')->user();
+        $user = $guard->setToken($token)->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'User not found for refreshed token.'], 401);
+        }
 
         return new AuthTokenResource([
             'token' => $token,

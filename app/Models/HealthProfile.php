@@ -16,6 +16,8 @@ class HealthProfile extends Model
         'gender',
         'height_cm',
         'weight_kg',
+        'work_hours_start',
+        'work_hours_end',
         'work_type',
         'baseline_sleep_hours',
         'baseline_stress_level',
@@ -30,6 +32,8 @@ class HealthProfile extends Model
             'height_cm' => 'decimal:2',
             'weight_kg' => 'decimal:2',
             'baseline_sleep_hours' => 'decimal:2',
+            'work_hours_start' => 'time',
+            'work_hours_end' => 'time',
         ];
     }
 

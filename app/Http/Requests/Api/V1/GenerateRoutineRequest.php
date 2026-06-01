@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GenerateRoutineRequest extends FormRequest
 {
@@ -22,6 +23,12 @@ class GenerateRoutineRequest extends FormRequest
             'activities' => ['nullable', 'array'],
             'activities.*' => ['string', 'max:255'],
             'constraints' => ['nullable', 'string', 'max:4000'],
+            'replace' => ['nullable', 'boolean'],
+            'goal_id' => [
+                'required',
+                'uuid',
+                Rule::exists('goals', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)),
+            ],
         ];
     }
 }
