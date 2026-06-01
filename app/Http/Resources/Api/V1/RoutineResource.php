@@ -16,6 +16,7 @@ class RoutineResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'goal_id' => $this->goal_id,
             'name' => $this->name,
             'description' => $this->description,
             'is_ai_generated' => $this->is_ai_generated,

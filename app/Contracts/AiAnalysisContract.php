@@ -13,4 +13,6 @@ interface AiAnalysisContract
     public function analyzeRoutine(User $user, Routine $routine): void;
 
     public function analyzeDailyLog(User $user, DailyLog $dailyLog): void;
+    
+    public function analyzeDailyLogs(User $user, array $dailyLogs): ?array;
 }

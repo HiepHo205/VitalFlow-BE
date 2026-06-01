@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineItemController;
 use App\Http\Controllers\Api\V1\UserSettingsController;
 use App\Http\Controllers\Api\V1\WeeklyReportController;
+use App\Http\Controllers\Api\V1\AiAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -21,7 +22,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('auth/login', [AuthController::class, 'login']);
     });
 
-    Route::post('auth/refresh', [AuthController::class, 'refresh'])->middleware('jwt.refresh');
+    Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
     Route::middleware(['jwt.auth'])->group(function (): void {
         Route::get('auth/me', [AuthController::class, 'me']);
@@ -50,6 +51,8 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('routine-completions', RoutineCompletionController::class)->except(['create', 'edit', 'update']);
 
         Route::apiResource('weekly-reports', WeeklyReportController::class)->except(['create', 'edit', 'update']);
+
+        Route::get('ai/analyze-logs', [AiAnalysisController::class, 'analyzeLogs']);
 
         Route::apiResource('focus-sessions', FocusSessionController::class)->except(['create', 'edit', 'update']);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\RoutineItem;
+use App\Http\Resources\Api\V1\RoutineCompletionResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,7 @@ class RoutineItemResource extends JsonResource
             'recurrence_type' => $this->recurrence_type,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'completions' => RoutineCompletionResource::collection($this->whenLoaded('completions')),
         ];
     }
 }

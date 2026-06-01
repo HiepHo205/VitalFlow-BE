@@ -10,6 +10,8 @@ class AiFeedback extends Model
 {
     use HasUuid;
 
+    protected $table = 'ai_feedbacks';
+
     protected $fillable = [
         'user_id',
         'related_log_id',
